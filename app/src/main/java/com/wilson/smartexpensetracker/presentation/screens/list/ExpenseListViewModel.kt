@@ -24,16 +24,17 @@ class ExpenseListViewModel @Inject constructor(
         loadExpensesForDate(System.currentTimeMillis())
     }
 
-    fun loadExpensesForDate(dateMillis: Long) {
+    fun loadExpensesForDate(dateMillis: Long? = null) {
+        val selectedDate = dateMillis ?: Calendar.getInstance().timeInMillis
         _state.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            useCases.getExpensesByDate(dateMillis).collect { expenses ->
+            useCases.getExpensesByDate(selectedDate).collect { expenses ->
                 _state.update {
                     it.copy(
                         expenses = expenses,
                         totalAmount = expenses.sumOf { e -> e.amount },
                         totalCount = expenses.size,
-                        selectedDate = dateMillis,
+                        selectedDate = selectedDate,
                         isLoading = false
                     )
                 }

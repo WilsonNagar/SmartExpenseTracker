@@ -1,6 +1,8 @@
 package com.wilson.smartexpensetracker.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -23,11 +25,15 @@ fun NavGraph(
     ) {
         composable(NavRoutes.ExpenseList.route) {
             val viewModel: ExpenseListViewModel = hiltViewModel()
+            val state by viewModel.state.collectAsState()
             ExpenseListScreen(
-                onNavigateToReport = {
-                    navController.safeNavigate(NavRoutes.ExpenseReport.route)
+                state = state,
+                onAddExpenseClick = { navController.navigate(NavRoutes.ExpenseEntry.route) },
+                onDeleteExpense = { expense ->
+                    viewModel.deleteExpense(expense.id)
                 },
-                viewModel
+                onViewReportClick = { navController.navigate(NavRoutes.ExpenseReport.route) },
+                onReload = { viewModel.loadExpensesForDate() }
             )
         }
 

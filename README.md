@@ -1,0 +1,2 @@
+# SmartExpenseTracker
+Smart Expense Tracker

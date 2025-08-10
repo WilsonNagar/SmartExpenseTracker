@@ -33,7 +33,7 @@ fun NavGraph(
                     viewModel.deleteExpense(expense.id)
                 },
                 onViewReportClick = { navController.navigate(NavRoutes.ExpenseReport.route) },
-                onReload = { viewModel.loadExpensesForDate() }
+                onReload = { dateMillis -> viewModel.loadExpensesForDate(dateMillis) }
             )
         }
 
@@ -41,7 +41,6 @@ fun NavGraph(
             val viewModel: ExpenseEntryViewModel = hiltViewModel()
             ExpenseEntryScreen(
                 onExpenseSaved = {
-                    viewModel.saveExpense()
                     navController.popBackStack()
                 },
                 viewModel

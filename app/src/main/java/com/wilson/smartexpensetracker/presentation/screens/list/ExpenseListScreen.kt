@@ -1,31 +1,52 @@
 package com.wilson.smartexpensetracker.presentation.screens.list
 
+//import com.wilson.smartexpensetracker.presentation.components.ThemeToggleSwitch
+import ExpenseListItem
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.ViewAgenda
-import androidx.compose.material3.*
 import androidx.compose.material3.DatePicker
-import androidx.compose.runtime.*
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.wilson.smartexpensetracker.domain.model.Expense
+import com.wilson.smartexpensetracker.presentation.components.ThemeToggleSwitch
 import com.wilson.smartexpensetracker.presentation.theme.LocalThemeState
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 
 enum class GroupingMode {
     CATEGORY, TIME
@@ -37,7 +58,7 @@ fun ExpenseListScreen(
     state: ExpenseListState,
     onAddExpenseClick: () -> Unit,
     onDeleteExpense: (Expense) -> Unit,
-    onReload: () -> Unit,
+    onReload: (Long) -> Unit,
     onViewReportClick: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -47,19 +68,24 @@ fun ExpenseListScreen(
 
     // Filter expenses by selectedDate
     val filteredExpenses = remember(state.expenses, selectedDate) {
-        val selectedDateStart = selectedDate.clone() as Calendar
-        selectedDateStart.set(Calendar.HOUR_OF_DAY, 0)
-        selectedDateStart.set(Calendar.MINUTE, 0)
-        selectedDateStart.set(Calendar.SECOND, 0)
-        selectedDateStart.set(Calendar.MILLISECOND, 0)
-
-        val selectedDateEnd = selectedDate.clone() as Calendar
-        selectedDateEnd.add(Calendar.DAY_OF_MONTH, 1)
-
-        state.expenses.filter {
-            val ts = it.timestamp
-            ts in selectedDateStart.timeInMillis until selectedDateEnd.timeInMillis
-        }
+        state.expenses
+        // Start of the selected date
+//        val selectedDateStart = (selectedDate.clone() as Calendar).apply {
+//            set(Calendar.HOUR_OF_DAY, 0)
+//            set(Calendar.MINUTE, 0)
+//            set(Calendar.SECOND, 0)
+//            set(Calendar.MILLISECOND, 0)
+//        }
+//
+//        // Start of the next day
+//        val selectedDateEnd = (selectedDateStart.clone() as Calendar).apply {
+//            add(Calendar.DAY_OF_MONTH, 1)
+//        }
+//
+//        state.expenses.filter {
+//            val ts = it.timestamp
+//            ts in selectedDateStart.timeInMillis until selectedDateEnd.timeInMillis
+//        }
     }
 
     val totalAmount = filteredExpenses.sumOf { it.amount }
@@ -71,17 +97,16 @@ fun ExpenseListScreen(
             TopAppBar(
                 title = { Text("Expenses") },
                 actions = {
-                    IconButton(onClick = themeState.toggleTheme) {
-                        Icon(
-                            imageVector = if (themeState.isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            contentDescription = "Toggle Theme"
-                        )
-                    }
+                    ThemeToggleSwitch(
+                        isDarkTheme = themeState.isDarkTheme,
+                        onToggle = themeState.toggleTheme
+                    )
                     IconButton(onClick = { showDatePicker = true }) {
                         Icon(Icons.Default.CalendarToday, contentDescription = "Select Date")
                     }
                     IconButton(onClick = {
-                        groupingMode = if (groupingMode == GroupingMode.TIME) GroupingMode.CATEGORY else GroupingMode.TIME
+                        groupingMode =
+                            if (groupingMode == GroupingMode.TIME) GroupingMode.CATEGORY else GroupingMode.TIME
                     }) {
                         Icon(
                             imageVector = if (groupingMode == GroupingMode.TIME) Icons.AutoMirrored.Filled.List else Icons.Default.ViewAgenda,
@@ -90,7 +115,7 @@ fun ExpenseListScreen(
                     }
                     IconButton(onClick = onViewReportClick) {
                         Icon(
-                            imageVector =  Icons.Default.BarChart,
+                            imageVector = Icons.Default.BarChart,
                             contentDescription = "Toggle Grouping"
                         )
                     }
@@ -111,7 +136,11 @@ fun ExpenseListScreen(
             ) {
                 // Totals row
                 Text(
-                    text = "Date: ${SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(selectedDate.time)}",
+                    text = "Date: ${
+                        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(
+                            selectedDate.time
+                        )
+                    }",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -152,7 +181,7 @@ fun ExpenseListScreen(
                     onDateSelected = {
                         selectedDate = it
                         showDatePicker = false
-                        onReload()
+                        onReload(it.timeInMillis)
                     }
                 )
             }
@@ -164,7 +193,9 @@ fun ExpenseListScreen(
 fun ExpenseListByTime(expenses: List<Expense>, onDeleteExpense: (Expense) -> Unit) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         itemsIndexed(expenses) { index, expense ->
-            ExpenseListItem(expense = expense, onDelete = { onDeleteExpense(expense) })
+            ExpenseListItem(
+                expense = expense, onDelete = { onDeleteExpense(expense) },
+            )
         }
     }
 }
@@ -188,47 +219,14 @@ fun ExpenseListByCategory(expenses: List<Expense>, onDeleteExpense: (Expense) ->
                 }
             }
             itemsIndexed(list) { _, expense ->
-                ExpenseListItem(expense = expense, onDelete = { onDeleteExpense(expense) })
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ExpenseListItem(expense: Expense, onDelete: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { /* maybe open details later */ },
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = expense.title, style = MaterialTheme.typography.titleMedium)
-                Text(text = expense.category, style = MaterialTheme.typography.bodySmall)
-                if (!expense.notes.isNullOrBlank()) {
-                    Text(
-                        text = expense.notes,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 2
-                    )
-                }
-            }
-            Text(text = "₹${"%.2f".format(expense.amount)}", fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.width(8.dp))
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete Expense"
+                ExpenseListItem(
+                    expense = expense, onDelete = { onDeleteExpense(expense) },
                 )
             }
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -239,30 +237,28 @@ fun DatePickerDialog(
 ) {
     val state = rememberDatePickerState(initialSelectedDateMillis = initialDate.timeInMillis)
 
-    if (true) { // your condition to show dialog
-        DatePickerDialog(
-            onDismissRequest = onDismissRequest,
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        state.selectedDateMillis?.let {
-                            val cal = Calendar.getInstance()
-                            cal.timeInMillis = it
-                            onDateSelected(cal)
-                        }
-                        onDismissRequest()
+    DatePickerDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    state.selectedDateMillis?.let {
+                        val cal = Calendar.getInstance()
+                        cal.timeInMillis = it
+                        onDateSelected(cal)
                     }
-                ) {
-                    Text("OK")
+                    onDismissRequest()
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismissRequest) {
-                    Text("Cancel")
-                }
+            ) {
+                Text("OK")
             }
-        ) {
-            DatePicker(state = state)
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text("Cancel")
+            }
         }
+    ) {
+        DatePicker(state = state)
     }
 }
